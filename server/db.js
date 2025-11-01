@@ -123,4 +123,8 @@ export async function getStudentByRegNo(regNo){
   return studentsDb.findOne({ regNo: String(regNo) })
 }
 
+export async function updateStudentPassword(regNo, newPassword){
+  return studentsDb.update({ regNo: String(regNo) }, { $set: { password: newPassword } })
+}
+
 

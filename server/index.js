@@ -6,7 +6,7 @@ import http from 'http'
 import { Server as SocketIOServer } from 'socket.io'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { initDb, createSession as dbCreateSession, saveToken as dbSaveToken, saveShortCode as dbSaveShortCode, deactivateToken as dbDeactivateToken, deleteShortCode as dbDeleteShortCode, markPresent as dbMarkPresent, enrollStudent as dbEnrollStudent, unenrollStudent as dbUnenrollStudent, getEnrollments as dbGetEnrollments, isEnrolled as dbIsEnrolled, getEnrollmentRecords as dbGetEnrollmentRecords, createStudent as dbCreateStudent, getStudentByRegNo as dbGetStudentByRegNo, createStaff, getStaffByEmail, listStaff } from './db.js'
+import { initDb, createSession as dbCreateSession, saveToken as dbSaveToken, saveShortCode as dbSaveShortCode, deactivateToken as dbDeactivateToken, deleteShortCode as dbDeleteShortCode, markPresent as dbMarkPresent, enrollStudent as dbEnrollStudent, unenrollStudent as dbUnenrollStudent, getEnrollments as dbGetEnrollments, isEnrolled as dbIsEnrolled, getEnrollmentRecords as dbGetEnrollmentRecords, createStudent as dbCreateStudent, getStudentByRegNo as dbGetStudentByRegNo, updateStudentPassword as dbUpdateStudentPassword, createStaff, getStaffByEmail, listStaff } from './db.js'
 
 const app = express()
 initDb()
@@ -333,6 +333,56 @@ app.post('/auth/student/login', async (req, res) => {
   const student = await dbGetStudentByRegNo(normalized)
   if (!student || student.password !== password) return res.status(401).json({ error: 'invalid_credentials' })
   return res.json({ role: 'student', regNo: student.regNo, studentId: student.studentId, name: student.name })
+})
+
+// Student password change
+app.post('/auth/student/change-password', async (req, res) => {
+  console.log('Password change request received:', {
+    body: req.body,
+    studentId: req.body?.studentId,
+    hasCurrentPassword: !!req.body?.currentPassword,
+    hasNewPassword: !!req.body?.newPassword
+  })
+  
+  const { studentId, currentPassword, newPassword } = req.body || {}
+  
+  if (!studentId || !currentPassword || !newPassword) {
+    console.log('Missing required fields')
+    return res.status(400).json({ error: 'missing_required_fields' })
+  }
+  
+  if (newPassword.length < 6) {
+    console.log('Password too short')
+    return res.status(400).json({ error: 'password_too_short' })
+  }
+  
+  try {
+    const normalized = String(studentId).replace(/\s+/g, '').trim()
+    console.log('Looking for student:', normalized)
+    const student = await dbGetStudentByRegNo(normalized)
+    
+    if (!student) {
+      console.log('Student not found')
+      return res.status(404).json({ error: 'student_not_found' })
+    }
+    
+    console.log('Student found:', { regNo: student.regNo, hasPassword: !!student.password })
+    
+    if (student.password !== currentPassword) {
+      console.log('Current password incorrect')
+      return res.status(401).json({ error: 'current_password_incorrect' })
+    }
+    
+    console.log('Updating password...')
+    await dbUpdateStudentPassword(normalized, newPassword)
+    console.log('Password updated successfully')
+    
+    return res.json({ message: 'password_updated_successfully' })
+    
+  } catch (error) {
+    console.error('Password update error:', error)
+    return res.status(500).json({ error: 'internal_server_error' })
+  }
 })
 
 // Admin auth (demo)
