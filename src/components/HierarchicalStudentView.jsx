@@ -17,6 +17,22 @@ export default function HierarchicalStudentView() {
   const [query, setQuery] = useState('')
   const [minAtt, setMinAtt] = useState(0)
   const [maxAtt, setMaxAtt] = useState(100)
+  const [showAddDeptModal, setShowAddDeptModal] = useState(false)
+  const [showAddYearModal, setShowAddYearModal] = useState(false)
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false)
+  const [showDeleteDeptModal, setShowDeleteDeptModal] = useState(false)
+  const [showDeleteYearModal, setShowDeleteYearModal] = useState(false)
+  const [deptToDelete, setDeptToDelete] = useState(null)
+  const [yearToDelete, setYearToDelete] = useState(null)
+  const [newDeptName, setNewDeptName] = useState('')
+  const [newYear, setNewYear] = useState('')
+  const [newStudent, setNewStudent] = useState({
+    name: '',
+    regNo: '',
+    studentId: '',
+    email: '',
+    password: 'student123'
+  })
 
   useEffect(() => {
     loadDepartments()
@@ -69,15 +85,18 @@ export default function HierarchicalStudentView() {
   const handleDepartmentClick = (dept) => {
     setSelectedDept(dept)
     setViewLevel('years')
+    setMessage('') // Clear message when navigating
   }
 
   const handleYearClick = (year) => {
     setSelectedYear(year)
     setViewLevel('students')
+    setMessage('') // Clear message when navigating
     loadStudents(selectedDept.name, year)
   }
 
   const handleBack = () => {
+    setMessage('') // Clear message when navigating back
     if (viewLevel === 'students') {
       setViewLevel('years')
       setSelectedYear(null)
@@ -117,12 +136,116 @@ export default function HierarchicalStudentView() {
     }
   }
 
+  const handleAddDepartment = async (e) => {
+    e.preventDefault()
+    if (!newDeptName.trim()) {
+      setMessage('Please enter a department name')
+      setTimeout(() => setMessage(''), 3000)
+      return
+    }
+    setShowAddDeptModal(false)
+    setMessage(`✓ Department "${newDeptName}" is ready! Add students to this department to make it visible in the list.`)
+    setNewDeptName('')
+    setTimeout(() => setMessage(''), 7000)
+  }
+
+  const handleAddYear = async (e) => {
+    e.preventDefault()
+    if (!newYear) {
+      setMessage('Please select a year')
+      setTimeout(() => setMessage(''), 3000)
+      return
+    }
+    setShowAddYearModal(false)
+    setMessage(`✓ Year "${newYear}" is ready for ${selectedDept?.name}! Add students to this year to populate it.`)
+    setNewYear('')
+    setTimeout(() => setMessage(''), 7000)
+  }
+
+  const handleAddStudent = async (e) => {
+    e.preventDefault()
+    try {
+      const studentData = {
+        ...newStudent,
+        department: selectedDept.name,
+        year: selectedYear
+      }
+      await adminApi.createStudent(studentData)
+      setMessage('Student added successfully!')
+      setShowAddStudentModal(false)
+      setNewStudent({
+        name: '',
+        regNo: '',
+        studentId: '',
+        email: '',
+        password: 'student123'
+      })
+      loadStudents(selectedDept.name, selectedYear)
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(''), 3000)
+    } catch (error) {
+      setMessage(error.message || 'Failed to add student')
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleDeleteDepartment = async () => {
+    try {
+      // Delete all students in this department
+      const response = await adminApi.getStudentsByDepartment(deptToDelete.name, null)
+      for (const student of response.students) {
+        await adminApi.deleteStudent(student.regNo)
+      }
+      
+      setMessage(`Department "${deptToDelete.name}" and all its students deleted successfully!`)
+      setShowDeleteDeptModal(false)
+      setDeptToDelete(null)
+      await loadDepartments()
+      setTimeout(() => setMessage(''), 3000)
+    } catch (error) {
+      setMessage('Failed to delete department: ' + (error.message || 'Unknown error'))
+      setShowDeleteDeptModal(false)
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleDeleteYear = async () => {
+    try {
+      // Delete all students in this year
+      const response = await adminApi.getStudentsByDepartment(selectedDept.name, yearToDelete)
+      for (const student of response.students) {
+        await adminApi.deleteStudent(student.regNo)
+      }
+      
+      setMessage(`Year "${yearToDelete}" and all its students deleted successfully!`)
+      setShowDeleteYearModal(false)
+      setYearToDelete(null)
+      // Reload department summary
+      await loadDepartments()
+      // Re-select the department to refresh the year view
+      const updatedDepts = await apiGet('/admin/departments/summary')
+      const updatedDept = updatedDepts.departments.find(d => d.name === selectedDept.name)
+      if (updatedDept) {
+        setSelectedDept(updatedDept)
+      }
+      setTimeout(() => setMessage(''), 3000)
+    } catch (error) {
+      setMessage('Failed to delete year: ' + (error.message || 'Unknown error'))
+      setShowDeleteYearModal(false)
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
   const filteredStudents = useMemo(() => {
     const q = query.toLowerCase()
-    return students.filter(s =>
-      s.attendance >= minAtt && s.attendance <= maxAtt &&
-      (s.name.toLowerCase().includes(q) || s.contact.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q))
-    )
+    return students.filter(s => {
+      const matchesAttendance = s.attendance >= minAtt && s.attendance <= maxAtt
+      const matchesName = s.name?.toLowerCase().includes(q)
+      const matchesContact = s.contact?.toLowerCase().includes(q)
+      const matchesRoll = s.roll?.toLowerCase().includes(q)
+      
+      return matchesAttendance && (matchesName || matchesContact || matchesRoll)
+    })
   }, [query, minAtt, maxAtt, students])
 
   if (loading && viewLevel === 'departments') {
@@ -138,20 +261,48 @@ export default function HierarchicalStudentView() {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-2">Select Department</h2>
-          <p className="text-gray-600 mb-6">Choose a department to view students by year</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Select Department</h2>
+              <p className="text-gray-600">Choose a department to view students by year</p>
+            </div>
+            <button
+              onClick={() => setShowAddDeptModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <span className="text-xl">+</span>
+              <span>Add Department</span>
+            </button>
+          </div>
+
+          {message && (
+            <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {message}
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {departments.map(dept => (
               <div
                 key={dept.name}
-                onClick={() => handleDepartmentClick(dept)}
-                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-indigo-500 transform hover:scale-105"
+                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-indigo-500 transform hover:scale-105 relative"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">{dept.name}</h3>
-                  <span className="text-4xl">🎓</span>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDeptToDelete(dept)
+                    setShowDeleteDeptModal(true)
+                  }}
+                  className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full text-sm z-10"
+                  title="Delete Department"
+                >
+                  ×
+                </button>
+                <div onClick={() => handleDepartmentClick(dept)}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800">{dept.name}</h3>
+                    <span className="text-4xl">🎓</span>
+                  </div>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-2 bg-white rounded-lg">
@@ -177,19 +328,74 @@ export default function HierarchicalStudentView() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Add Department Modal */}
+        {showAddDeptModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => { setShowAddDeptModal(false); setMessage(''); }}>
+            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-xl font-bold mb-4">Add New Department</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                ℹ️ Note: Departments appear automatically when you add students. Enter the department name you want to use when adding students.
+              </p>
+              <form onSubmit={handleAddDepartment} className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Department Name (e.g., Computer Science)"
+                  value={newDeptName}
+                  onChange={(e) => setNewDeptName(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+                <div className="flex gap-2 justify-end">
+                  <button type="button" onClick={() => { setShowAddDeptModal(false); setMessage(''); }} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Continue</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Department Modal */}
+        {showDeleteDeptModal && deptToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => { setShowDeleteDeptModal(false); setDeptToDelete(null); }}>
+            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-xl font-bold mb-4 text-red-600">⚠️ Delete Department</h2>
+              <p className="mb-4 text-gray-700">
+                Are you sure you want to delete <strong>{deptToDelete.name}</strong>?
+              </p>
+              <div className="mb-4 p-3 bg-red-50 text-red-800 rounded-lg text-sm">
+                <strong>Warning:</strong> This will delete all {deptToDelete.students.total} students and {deptToDelete.staff.total} staff members in this department!
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => { setShowDeleteDeptModal(false); setDeptToDelete(null); }} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button onClick={handleDeleteDepartment} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete Department</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
   // LEVEL 2: YEARS VIEW
   if (viewLevel === 'years') {
-    const years = Object.keys(selectedDept.students.byYear).length > 0
-      ? Object.keys(selectedDept.students.byYear)
-      : ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year']
+    // Define year order
+    const yearOrder = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year']
+    
+    // Get years from data (only show years that have students)
+    let years = Object.keys(selectedDept.students.byYear)
+    
+    // Sort years according to the defined order
+    years = years.sort((a, b) => {
+      const indexA = yearOrder.indexOf(a)
+      const indexB = yearOrder.indexOf(b)
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB)
+    })
 
     return (
       <div className="space-y-6">
@@ -204,19 +410,54 @@ export default function HierarchicalStudentView() {
             </button>
           </div>
 
-          <h2 className="text-2xl font-bold mb-2">{selectedDept.name}</h2>
-          <p className="text-gray-600 mb-6">Select a year to view students</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">{selectedDept.name}</h2>
+              <p className="text-gray-600">Select a year to view students</p>
+            </div>
+            <button
+              onClick={() => setShowAddYearModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <span className="text-xl">+</span>
+              <span>Add Year</span>
+            </button>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {years.map(year => {
+          {message && (
+            <div className={`mb-4 p-3 rounded-lg ${message.includes('success') || message.includes('✓') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {message}
+            </div>
+          )}
+
+          {years.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-xl">
+              <div className="text-6xl mb-4">📚</div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Years Yet</h3>
+              <p className="text-gray-600 mb-4">This department doesn't have any students yet.</p>
+              <p className="text-sm text-gray-500">Click "Add Year" above to prepare a year, then add students to it.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {years.map(year => {
               const count = selectedDept.students.byYear[year] || 0
               return (
                 <div
                   key={year}
-                  onClick={() => handleYearClick(year)}
-                  className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500 transform hover:scale-105"
+                  className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500 transform hover:scale-105 relative"
                 >
-                  <div className="text-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setYearToDelete(year)
+                      setShowDeleteYearModal(true)
+                    }}
+                    className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full text-sm z-10"
+                    title="Delete Year"
+                  >
+                    ×
+                  </button>
+                  <div onClick={() => handleYearClick(year)} className="text-center">
                     <div className="text-3xl mb-2">📚</div>
                     <h3 className="text-lg font-bold text-gray-800 mb-2">{year}</h3>
                     <div className="text-3xl font-bold text-green-600">{count}</div>
@@ -225,8 +466,59 @@ export default function HierarchicalStudentView() {
                 </div>
               )
             })}
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* Add Year Modal */}
+        {showAddYearModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => { setShowAddYearModal(false); setMessage(''); }}>
+            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-xl font-bold mb-4">Add Year to {selectedDept?.name}</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                ℹ️ Note: Years appear automatically when you add students. Select the year you want to use, then add students to that year.
+              </p>
+              <form onSubmit={handleAddYear} className="space-y-3">
+                <select
+                  value={newYear}
+                  onChange={(e) => setNewYear(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                >
+                  <option value="">Select Year</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="5th Year">5th Year</option>
+                </select>
+                <div className="flex gap-2 justify-end">
+                  <button type="button" onClick={() => { setShowAddYearModal(false); setMessage(''); }} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg">Continue</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Year Modal */}
+        {showDeleteYearModal && yearToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => { setShowDeleteYearModal(false); setYearToDelete(null); }}>
+            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-xl font-bold mb-4 text-red-600">⚠️ Delete Year</h2>
+              <p className="mb-4 text-gray-700">
+                Are you sure you want to delete <strong>{yearToDelete}</strong> from <strong>{selectedDept?.name}</strong>?
+              </p>
+              <div className="mb-4 p-3 bg-red-50 text-red-800 rounded-lg text-sm">
+                <strong>Warning:</strong> This will delete all students in {yearToDelete}!
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => { setShowDeleteYearModal(false); setYearToDelete(null); }} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button onClick={handleDeleteYear} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete Year</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -266,12 +558,21 @@ export default function HierarchicalStudentView() {
             <h2 className="text-2xl font-bold">{selectedDept.name} - {selectedYear}</h2>
             <p className="text-gray-600">Total Students: {filteredStudents.length}</p>
           </div>
-          <button
-            onClick={handleBack}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            ← Back to Years
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAddStudentModal(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
+              <span className="text-xl">+</span>
+              <span>Add Student</span>
+            </button>
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              ← Back to Years
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -473,6 +774,76 @@ export default function HierarchicalStudentView() {
               <div className="flex gap-2 justify-end">
                 <button type="button" onClick={() => setShowPasswordModal(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-yellow-600 text-white rounded-lg">Reset</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Student Modal */}
+      {showAddStudentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => { setShowAddStudentModal(false); setMessage(''); }}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4">Add Student to {selectedDept?.name} - {selectedYear}</h2>
+            <form onSubmit={handleAddStudent} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="Student Name"
+                  value={newStudent.name}
+                  onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Registration Number *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., ES22CJ01"
+                  value={newStudent.regNo}
+                  onChange={(e) => setNewStudent({...newStudent, regNo: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Student ID *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., ES22CJ01"
+                  value={newStudent.studentId}
+                  onChange={(e) => setNewStudent({...newStudent, studentId: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  placeholder="student@example.com"
+                  value={newStudent.email}
+                  onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <input
+                  type="password"
+                  placeholder="Default: student123"
+                  value={newStudent.password}
+                  onChange={(e) => setNewStudent({...newStudent, password: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                  minLength="6"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => { setShowAddStudentModal(false); setMessage(''); }} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">Add Student</button>
               </div>
             </form>
           </div>

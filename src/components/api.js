@@ -90,6 +90,7 @@ export const adminApi = {
   resetStaffPassword: (id, newPassword) => apiPost(`/admin/staff/${id}/reset-password`, { newPassword }),
   
   // Student Management
+  createStudent: (data) => apiPost('/admin/students/add', data),
   deleteStudent: (regNo) => fetch(`${API_BASE}/admin/students/${regNo}`, { method: 'DELETE' }).then(r => r.json()),
   resetStudentPassword: (regNo, newPassword) => apiPost(`/admin/students/${regNo}/reset-password`, { newPassword }),
   

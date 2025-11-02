@@ -1534,6 +1534,39 @@ app.post('/admin/students/:regNo/reset-password', async (req, res) => {
   }
 })
 
+// Add student
+app.post('/admin/students/add', async (req, res) => {
+  try {
+    const { name, regNo, studentId, email, password, department, year } = req.body
+    
+    if (!name || !regNo || !studentId) {
+      return res.status(400).json({ error: 'missing_required_fields', message: 'Name, RegNo, and StudentId are required' })
+    }
+    
+    // Check if student already exists
+    const existing = await dbGetStudentByRegNo(regNo)
+    if (existing) {
+      return res.status(400).json({ error: 'student_exists', message: 'A student with this registration number already exists' })
+    }
+    
+    // Create student
+    await dbCreateStudent({
+      regNo,
+      studentId,
+      name,
+      password: password || 'student123',
+      email: email || '',
+      department: department || 'M.Tech',
+      year: year || '4th Year'
+    })
+    
+    return res.json({ success: true, message: 'Student added successfully' })
+  } catch (error) {
+    console.error('Add student error:', error)
+    return res.status(500).json({ error: 'internal_error', message: error.message })
+  }
+})
+
 // System Settings APIs
 
 // Get system settings
