@@ -19,6 +19,7 @@ export default function Profile(){
   const [currentPassword, setCurrentPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [teachingDetailsSaving, setTeachingDetailsSaving] = useState(false)
 
   useEffect(() => {
     if (user?.email) {
@@ -105,6 +106,21 @@ export default function Profile(){
     }
   }
 
+  const updateTeachingDetails = async (teachingData) => {
+    try {
+      setTeachingDetailsSaving(true)
+      setMessage('')
+      await staffApi.updateProfile(user.email, teachingData)
+      setMessage('Teaching details updated successfully!')
+      await loadProfile()
+    } catch (error) {
+      console.error('Failed to update teaching details:', error)
+      setMessage('Failed to update teaching details')
+    } finally {
+      setTeachingDetailsSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -122,54 +138,54 @@ export default function Profile(){
       )}
       <ProfileCard name={name} email={user?.email || 'staff@demo.com'} department={dept} role="Staff" onEdit={()=>{}} onLogout={logout} />
 
-      <TeachingDetails profile={profile} />
+      <TeachingDetails profile={profile} onUpdate={updateTeachingDetails} />
 
       <RecentActivity activities={activities} />
 
-      <form onSubmit={save} className="bg-white rounded-xl shadow-md p-6 max-w-xl space-y-3">
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">Edit Profile</h2>
+      <form onSubmit={save} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 max-w-xl space-y-3">
+        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">Edit Profile</h2>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">Name</div>
-          <input className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={name} onChange={(e)=>setName(e.target.value)} />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Name</div>
+          <input className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={name} onChange={(e)=>setName(e.target.value)} />
         </label>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">Department</div>
-          <input className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={dept} onChange={(e)=>setDept(e.target.value)} />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Department</div>
+          <input className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={dept} onChange={(e)=>setDept(e.target.value)} />
         </label>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">Designation</div>
-          <input className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={designation} onChange={(e)=>setDesignation(e.target.value)} placeholder="e.g., Assistant Professor" />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Designation</div>
+          <input className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={designation} onChange={(e)=>setDesignation(e.target.value)} placeholder="e.g., Assistant Professor" />
         </label>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">Experience</div>
-          <input className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={experience} onChange={(e)=>setExperience(e.target.value)} placeholder="e.g., 5 years" />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Experience</div>
+          <input className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={experience} onChange={(e)=>setExperience(e.target.value)} placeholder="e.g., 5 years" />
         </label>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">Contact</div>
-          <input className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={contact} onChange={(e)=>setContact(e.target.value)} />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Contact</div>
+          <input className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={contact} onChange={(e)=>setContact(e.target.value)} />
         </label>
         <div className="pt-2">
-          <button type="submit" disabled={saving} className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
 
-      <form onSubmit={changePw} className="bg-white rounded-xl shadow-md p-6 max-w-xl space-y-3">
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">Security</h2>
+      <form onSubmit={changePw} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 max-w-xl space-y-3">
+        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">Security</h2>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">Current Password</div>
-          <input type="password" className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} placeholder="Enter current password" required />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Password</div>
+          <input type="password" className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} placeholder="Enter current password" required />
         </label>
         <label className="block">
-          <div className="text-sm text-gray-600 mb-1">New Password</div>
-          <input type="password" className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Enter new password (min 6 characters)" required />
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">New Password</div>
+          <input type="password" className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Enter new password (min 6 characters)" required />
         </label>
         <div className="pt-2 flex gap-2">
-          <button type="submit" disabled={saving} className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
             {saving ? 'Updating...' : 'Change Password'}
           </button>
-          <button type="button" onClick={logout} className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200">Logout</button>
+          <button type="button" onClick={logout} className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white transition-colors">Logout</button>
         </div>
       </form>
     </div>

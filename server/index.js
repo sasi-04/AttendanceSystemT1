@@ -1778,6 +1778,7 @@ function calculateDuration(startDate, endDate) {
   return `${diffDays} days`
 }
 
+
 // Serve frontend build (same-origin) if available
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distPath = path.resolve(__dirname, '../dist')

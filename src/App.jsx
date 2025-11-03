@@ -5,6 +5,7 @@ import StudentLogin from './pages/StudentLogin';
 import StaffLogin from './pages/StaffLogin';
 import AdminLogin from './pages/AdminLogin';
 import { AuthProvider } from './context/AuthContext.jsx'
+import { ThemeProvider } from './context/ThemeContext.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import StudentLayout from './layouts/StudentLayout.jsx'
 import StudentDashboard from './pages/StudentDashboard.jsx'
@@ -28,8 +29,9 @@ import StudentScanAttendance from './pages/student/Attendance.jsx'
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<UnifiedLogin />} />
         <Route path="/login/student" element={<StudentLogin />} />
@@ -68,8 +70,9 @@ function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </AuthProvider>
+        </Routes>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

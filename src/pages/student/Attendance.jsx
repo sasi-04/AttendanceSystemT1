@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import StudentQrScanner from '../../components/StudentQrScanner.jsx'
+import AutoFullScreenQrScanner from '../../components/AutoFullScreenQrScanner.jsx'
 import { apiPost } from '../../components/api.js'
 
 export default function StudentScanAttendance(){
@@ -8,11 +9,22 @@ export default function StudentScanAttendance(){
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const mode = searchParams.get('mode') || 'both' // 'scanner', 'manual', or 'both'
+  const [showFullScreenScanner, setShowFullScreenScanner] = useState(false)
   const inputRef = useRef(null)
 
   const handleModeChange = (newMode) => {
     console.log('Changing mode to:', newMode)
-    navigate(`/student/attendance?mode=${newMode}`, { replace: true })
+    if (newMode === 'scanner') {
+      // Directly open full screen scanner instead of navigating
+      setShowFullScreenScanner(true)
+    } else {
+      navigate(`/student/attendance?mode=${newMode}`, { replace: true })
+    }
+  }
+
+  const handleCloseScanner = () => {
+    setShowFullScreenScanner(false)
+    setScanState({ status: 'idle', message: '' })
   }
 
   const validateToken = async (token) => {
@@ -50,16 +62,26 @@ export default function StudentScanAttendance(){
 
   return (
     <div className="space-y-6">
+      {/* Full Screen QR Scanner Overlay */}
+      {showFullScreenScanner && (
+        <AutoFullScreenQrScanner
+          onDecode={(result) => validateToken(String(result))}
+          onError={() => {}}
+          onClose={handleCloseScanner}
+          constraints={{ facingMode: 'environment' }}
+          autoStart={true}
+        />
+      )}
       {/* Mode Selection Buttons */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Choose Attendance Method</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Choose Attendance Method</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
             onClick={() => handleModeChange('scanner')}
             className={`flex items-center justify-center gap-3 p-4 rounded-lg transition-colors ${
               mode === 'scanner' 
                 ? 'bg-blue-600 text-white' 
-                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
             }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +98,7 @@ export default function StudentScanAttendance(){
             className={`flex items-center justify-center gap-3 p-4 rounded-lg transition-colors ${
               mode === 'manual' 
                 ? 'bg-green-600 text-white' 
-                : 'bg-green-50 text-green-600 hover:bg-green-100'
+                : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'
             }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,34 +112,22 @@ export default function StudentScanAttendance(){
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold">{getTitle()}</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white">{getTitle()}</h2>
         </div>
         
-        {/* QR Scanner Section - Show ONLY if mode is 'scanner' */}
+        {/* QR Scanner Instructions - Show ONLY if mode is 'scanner' */}
         {mode === 'scanner' && (
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">📷 Camera Scanner</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="aspect-square bg-black/5 rounded-lg overflow-hidden flex items-center justify-center">
-                  {typeof navigator !== 'undefined' && navigator.mediaDevices ? (
-                    <StudentQrScanner
-                      onDecode={(result) => validateToken(String(result))}
-                      onError={() => {}}
-                      constraints={{ facingMode: 'environment' }}
-                    />
-                  ) : (
-                    <div className="p-4 text-center text-sm text-gray-600">Camera not available in this context.</div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="text-sm text-gray-600">
-                  <p className="mb-2">📱 Point your camera at the QR code displayed by your teacher</p>
-                  <p>✅ Attendance will be marked automatically when scanned</p>
-                </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+              <div className="text-center space-y-4">
+                <button
+                  onClick={() => setShowFullScreenScanner(true)}
+                  className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg"
+                >
+                  📷 Open QR Scanner
+                </button>
               </div>
             </div>
           </div>

@@ -121,59 +121,59 @@ export default function QRGeneratorPanel({ heading = 'Live Attendance QR', defau
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-lg font-semibold">{heading}</div>
+        <div className="text-lg font-semibold text-gray-900 dark:text-white">{heading}</div>
         <div className="flex gap-2">
-          <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className="px-3 py-2 rounded-md border bg-gray-50">
+          <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
             <option value="COURSE1">COURSE1</option>
             <option value="COURSE2">COURSE2</option>
           </select>
-          <button onClick={sessionId ? regenerateQR : startSession} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60">{loading ? 'Generating…' : 'Generate QR (30s)'}</button>
+          <button onClick={sessionId ? regenerateQR : startSession} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors">{loading ? 'Generating…' : 'Generate QR (30s)'}</button>
           {sessionId && (
-            <button onClick={closeSession} className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Close</button>
+            <button onClick={closeSession} className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Close</button>
           )}
           {sessionId && (
-            <button onClick={copySessionId} className="px-3 py-2 border rounded-lg">Copy ID</button>
+            <button onClick={copySessionId} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Copy ID</button>
           )}
           {qr?.code && (
-            <button onClick={() => navigator.clipboard.writeText(qr.code)} className="px-3 py-2 border rounded-lg">Copy Token</button>
+            <button onClick={() => navigator.clipboard.writeText(qr.code)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Copy Token</button>
           )}
           {qr?.imageDataUrl && (
-            <button onClick={downloadQR} className="px-3 py-2 border rounded-lg">Download QR</button>
+            <button onClick={downloadQR} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Download QR</button>
           )}
         </div>
       </div>
-      {error && <div className="mb-3 text-sm text-red-700">{String(error)}</div>}
+      {error && <div className="mb-3 text-sm text-red-700 dark:text-red-400">{String(error)}</div>}
       {sessionId ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col items-center">
             {qr?.imageDataUrl ? (
               <img key={qr?.jti || 'qr'} ref={imgRef} src={qr.imageDataUrl} alt="QR" className="w-64 h-64 object-contain border rounded-lg" />
             ) : qr?.token ? (
-              <div className="w-64 h-64 p-3 border rounded-lg bg-white flex items-center justify-center">
+              <div className="w-64 h-64 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 flex items-center justify-center">
                 <QRCodeCanvas value={qr.token} size={224} includeMargin={false} />
               </div>
             ) : (
-              <div className="w-64 h-64 flex items-center justify-center border rounded-lg text-gray-500">Waiting for QR...</div>
+              <div className="w-64 h-64 flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400">Waiting for QR...</div>
             )}
-            <div className="mt-3 countdown text-gray-700">{secondsRemaining !== null ? `${secondsRemaining}s remaining` : 'Connecting...'}</div>
-            <div className="mt-2 text-sm text-gray-600">Token: <span className="font-mono text-lg tracking-widest text-gray-900">{qr?.code || '—'}</span></div>
+            <div className="mt-3 countdown text-gray-700 dark:text-gray-300">{secondsRemaining !== null ? `${secondsRemaining}s remaining` : 'Connecting...'}</div>
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Token: <span className="font-mono text-lg tracking-widest text-gray-900 dark:text-white">{qr?.code || '—'}</span></div>
           </div>
           <div className="space-y-2">
-            <div className="text-sm text-gray-500">Session</div>
-            <div className="font-mono text-gray-800 break-all">{sessionId}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Session</div>
+            <div className="font-mono text-gray-800 dark:text-gray-200 break-all">{sessionId}</div>
             {qr?.code && (
-              <div className="mt-2 text-sm"><span className="text-gray-500 mr-2">Token:</span><span className="font-mono text-xl tracking-widest text-gray-900">{qr.code}</span></div>
+              <div className="mt-2 text-sm"><span className="text-gray-500 dark:text-gray-400 mr-2">Token:</span><span className="font-mono text-xl tracking-widest text-gray-900 dark:text-white">{qr.code}</span></div>
             )}
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="p-3 bg-green-50 text-green-700 rounded-lg">Present: {stats.present}</div>
-              <div className="p-3 bg-yellow-50 text-yellow-700 rounded-lg">Remaining: {stats.remaining}</div>
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg">Present: {stats.present}</div>
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-lg">Remaining: {stats.remaining}</div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="text-sm text-gray-600">Choose a course and click Start to generate a QR valid for 30 seconds.</div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">Choose a course and click Start to generate a QR valid for 30 seconds.</div>
       )}
     </div>
   )
